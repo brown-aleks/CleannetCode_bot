@@ -29,6 +29,8 @@ namespace CleannetCode_bot
 
             var me = await botClient.GetMeAsync();
 
+            var b = await botClient.GetChatAsync(new ChatId(-1001414886435));
+
             Console.WriteLine("Hey! I am CleannetCode_bot.");
             Console.ReadKey();
 
@@ -37,6 +39,8 @@ namespace CleannetCode_bot
         }
         static async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
+            var client = botClient;
+
             // Обрабатывать только обновления сообщений: https://core.telegram.org/bots/api#message
             if (update.Message is not { } message)
                 return;
@@ -44,15 +48,18 @@ namespace CleannetCode_bot
             if (message.Text is not { } messageText)
                 return;
 
-            var chatId = message.Chat.Id;
+            var chat = message.Chat;
 
-            Console.WriteLine($"Received a '{messageText}' message in chat {chatId}.");
+            Console.WriteLine($"{message.Date.ToLocalTime()} - {message.From?.Username} - {message.From?.FirstName} {message.From?.LastName} - message in chat {chat.Id}.\n Received a '{messageText}'");
 
-            // Echo received message text
+            // Эхо полученного текста сообщения
+            /*
             Message sentMessage = await botClient.SendTextMessageAsync(
-                chatId: chatId,
-                text: "You said:\n" + messageText,
-                cancellationToken: cancellationToken);
+                chatId: chat.Id,
+                text: $"{message.ForwardSenderName} написал:\n" + messageText,  //  chat.Username
+                cancellationToken: cancellationToken,
+                replyToMessageId: message.MessageId);
+            */
         }
 
         static Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
