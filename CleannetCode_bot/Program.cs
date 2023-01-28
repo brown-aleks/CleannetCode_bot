@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Serilog;
 using Telegram.Bot;
 
 namespace CleannetCode_bot
@@ -24,7 +25,7 @@ namespace CleannetCode_bot
                 })
                 .ConfigureServices((context, services) =>
                 {
-                    services.AddScoped<IBotService, BotService>();
+                    services.AddHostedService<BotService>();
                     services.AddSingleton<WelcomeHandler>();
                     services.AddScoped<IStorageService, StorageFileService>();
                     services.AddScoped<Handlers>();
@@ -34,13 +35,14 @@ namespace CleannetCode_bot
                         return new(accessToken);
                     });
                 })
-                .ConfigureLogging((logging) =>
+                .ConfigureLogging((context, logging) =>
                     logging.ClearProviders()
-                        .AddConsole())
+                        .AddSerilog(new LoggerConfiguration()
+                            .ReadFrom.Configuration(context.Configuration)
+                            .CreateLogger()))
                 .Build();
 
-            var svc = ActivatorUtilities.CreateInstance<BotService>(host.Services);
-            await svc.RunAsync();
+            await host.StartAsync();
         }
     }
 }
