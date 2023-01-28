@@ -37,7 +37,23 @@ namespace CleannetCode_bot
             // Начать получение не блокирует поток вызывающего абонента. Получение выполняется в пуле потоков.
             ReceiverOptions receiverOptions = new()
             {
-                AllowedUpdates = Array.Empty<UpdateType>() // получать все типы обновлений
+                AllowedUpdates = new[]
+                {
+                    UpdateType.Message,
+                    UpdateType.InlineQuery,
+                    UpdateType.ChosenInlineResult,
+                    UpdateType.CallbackQuery,
+                    UpdateType.EditedMessage,
+                    UpdateType.ChannelPost,
+                    UpdateType.EditedChannelPost,
+                    UpdateType.ShippingQuery,
+                    UpdateType.PreCheckoutQuery,
+                    UpdateType.Poll,
+                    UpdateType.PollAnswer,
+                    UpdateType.MyChatMember,
+                    UpdateType.ChatMember,
+                    UpdateType.ChatJoinRequest
+                }
             };
 
             botClient.StartReceiving(
