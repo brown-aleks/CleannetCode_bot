@@ -177,11 +177,7 @@ public class WelcomeHandler
     public async Task HandleChatMember(User member, long chatId)
     {
         var fromId = member.Id;
-        var user = await ReadAsync(fromId);
-        if (user is not null)
-            return;
-
-        user = new(fromId,
+        var user = new WelcomeUserInfo(fromId,
             member.Username ?? member.FirstName,
             member.FirstName,
             member.LastName ?? string.Empty,

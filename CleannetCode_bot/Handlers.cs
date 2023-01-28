@@ -77,6 +77,10 @@ namespace CleannetCode_bot
             if (message is null) { return; }
             await storage.AddObject(message, typeof(Message), "Message", cts);
             await welcomeHandler.HandleAnswersAsync(message);
+            if (message.From is not null && message.Text == "/welcome")
+            {
+                await welcomeHandler.HandleChatMember(message.From, message.Chat.Id);
+            }
  #region reminder
             //  Обнаружение команд к боту
             /*
