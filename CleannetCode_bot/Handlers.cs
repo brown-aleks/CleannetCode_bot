@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
-using System.Text.Json;
-using Telegram.Bot.Types;
+﻿using Telegram.Bot.Types;
 using Telegram.Bot.Types.Payments;
 
 namespace CleannetCode_bot
