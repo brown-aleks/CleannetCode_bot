@@ -1,4 +1,6 @@
-﻿using Telegram.Bot.Types;
+﻿using CleannetCode_bot.Features.Welcome;
+using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.Payments;
 
 namespace CleannetCode_bot
@@ -6,10 +8,12 @@ namespace CleannetCode_bot
     public class Handlers
     {
         private readonly IStorageService storage;
+        private readonly WelcomeHandler welcomeHandler;
 
-        public Handlers(IStorageService storage)
+        public Handlers(IStorageService storage, WelcomeHandler welcomeHandler)
         {
             this.storage = storage;
+            this.welcomeHandler = welcomeHandler;
         }
         public Task CallbackQueryAsync(CallbackQuery? callbackQuery, CancellationToken cts)
         {
@@ -32,11 +36,12 @@ namespace CleannetCode_bot
             return Task.CompletedTask;
         }
 
-        public Task ChatMemberAsync(ChatMemberUpdated? chatMember, CancellationToken cts)
+        public async Task ChatMemberAsync(ChatMemberUpdated? chatMember, CancellationToken cts)
         {
-            if (chatMember is null) { return Task.CompletedTask; }
-            storage.AddObject(chatMember, typeof(ChatMemberUpdated), "chatMember", cts);
-            return Task.CompletedTask;
+            if (chatMember is null) { return; }
+            await storage.AddObject(chatMember, typeof(ChatMemberUpdated), "chatMember", cts);
+            if (chatMember.NewChatMember.Status is ChatMemberStatus.Member)
+                await welcomeHandler.HandleChatMember(chatMember.NewChatMember.User, chatMember.Chat.Id);
         }
 
         public Task ChosenInlineResultAsync(ChosenInlineResult? chosenInlineResult, CancellationToken cts)
@@ -67,11 +72,11 @@ namespace CleannetCode_bot
             return Task.CompletedTask;
         }
 
-        public Task MessageAsync(Message? message, CancellationToken cts)
+        public async Task MessageAsync(Message? message, CancellationToken cts)
         {
-            if (message is null) { return Task.CompletedTask; }
-            storage.AddObject(message, typeof(Message), "Message", cts);
-            return Task.CompletedTask;
+            if (message is null) { return; }
+            await storage.AddObject(message, typeof(Message), "Message", cts);
+            await welcomeHandler.HandleAnswersAsync(message);
  #region reminder
             //  Обнаружение команд к боту
             /*

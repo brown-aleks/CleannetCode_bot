@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot;
@@ -11,31 +11,20 @@ namespace CleannetCode_bot
     public class BotService : IBotService
     {
         private readonly ILogger<BotService> logger;
-        private readonly IConfiguration config;
         private readonly Handlers handlers;
-
-        public BotService(ILogger<BotService> logger, IConfiguration config, Handlers handlers)
+        private readonly ITelegramBotClient client;
+        private readonly ConcurrentBag<Task> awaitedTasks = new();
+        public BotService(ILogger<BotService> logger, Handlers handlers, ITelegramBotClient client)
         {
             this.logger = logger;
-            this.config = config;
             this.handlers = handlers;
+            this.client = client;
         }
+
         public async Task RunAsync()
         {
-            string? accessToken = config.GetValue<string>("AccessToken");
-            if (accessToken == null)
-            {
-                logger.LogError("{DateTime:dd.MM.yyyy HH:mm:ss:ffff}\tAccessToken is null", DateTime.Now);
-                return;
-            }
-            logger.LogInformation("{DateTime:dd.MM.yyyy HH:mm:ss:ffff}\tCleannetCode_bot is start", DateTime.Now);
-
-            using CancellationTokenSource cts = new();
-
-            var botClient = new TelegramBotClient(accessToken);
-
             // Начать получение не блокирует поток вызывающего абонента. Получение выполняется в пуле потоков.
-            ReceiverOptions receiverOptions = new()
+            var receiverOptions = new ReceiverOptions()
             {
                 AllowedUpdates = new[]
                 {
@@ -56,32 +45,32 @@ namespace CleannetCode_bot
                 }
             };
 
-            botClient.StartReceiving(
+            using CancellationTokenSource cts = new();
+            client.StartReceiving(
                 updateHandler: HandleUpdateAsync,
                 pollingErrorHandler: HandlePollingErrorAsync,
                 receiverOptions: receiverOptions,
                 cancellationToken: cts.Token
             );
 
-            var me = await botClient.GetMeAsync();
+            var me = await client.GetMeAsync(cts.Token);
 
             logger.LogInformation("{DateTime:dd.MM.yyyy HH:mm:ss:ffff}\tHey! I am {BotName}", DateTime.Now, me.Username);
 
             Console.ReadKey();
-
+            Task.WaitAll(awaitedTasks.ToArray());
             // Отправить запрос на отмену, чтобы остановить бота
             cts.Cancel();
         }
 
-        public Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cts)
+        private Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cts)
         {
             // Типы обновлений смотри тут: https://core.telegram.org/bots/api#update
-
             //--------------------------------------------------
             // Разобратся с типом getUpdates. Попытаться запросить историю уже прочитанных сообщений: https://core.telegram.org/bots/api#getupdates
             //--------------------------------------------------
 
-            return update.Type switch
+            awaitedTasks.Add(update.Type switch
             {
                 UpdateType.Message => handlers.MessageAsync(update.Message, cts),
                 UpdateType.InlineQuery => handlers.InlineQueryAsync(update.InlineQuery, cts),
@@ -98,19 +87,20 @@ namespace CleannetCode_bot
                 UpdateType.ChatMember => handlers.ChatMemberAsync(update.ChatMember, cts),
                 UpdateType.ChatJoinRequest => handlers.ChatJoinRequestAsync(update.ChatJoinRequest, cts),
                 _ => handlers.UnknownAsync(update, cts)
-            };
+            });
+            return Task.CompletedTask;
         }
 
-        static Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
+        private Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
         {
-            var ErrorMessage = exception switch
+            var errorMessage = exception switch
             {
                 ApiRequestException apiRequestException
                     => $"Telegram API Error:\n[{apiRequestException.ErrorCode}]\n{apiRequestException.Message}",
                 _ => exception.ToString()
             };
 
-            Console.WriteLine(ErrorMessage);
+            logger.LogError(exception, errorMessage);
             return Task.CompletedTask;
         }
 
