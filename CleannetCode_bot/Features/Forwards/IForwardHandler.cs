@@ -10,6 +10,6 @@ namespace CleannetCode_bot.Features.Forwards
 {
     internal interface IForwardHandler
     {
-        Task HandleAsync(Message message, ITelegramBotClient botClient, CancellationToken ct);
+        Task HandleAsync(Message message, CancellationToken ct);
     }
 }
