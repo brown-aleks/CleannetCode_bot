@@ -28,7 +28,7 @@ namespace CleannetCode_bot.Features.Forwards
 
         public async Task HandleAsync(Message message, CancellationToken ct)
         {
-            var logPrefix = $"message {message.MessageId}, chat {message.Chat.Id}";
+            var logPrefix = $"message: {message.MessageId}, chat: {message.Chat.Id}:";
 
             _logger.LogDebug($"{logPrefix} {nameof(ForwardsHandler)} called");
 
