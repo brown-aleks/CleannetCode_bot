@@ -43,7 +43,7 @@ namespace CleannetCode_bot.Features.Forwards
             if (allowedUsers.Any(u => u == message.From.Id))
             {
                 // сообщения от пользователя разрешены
-                _logger.LogDebug($"{logPrefix} Chat is not restricted");
+                _logger.LogDebug($"{logPrefix} The user is in the allowed list in the chat");
                 return;
             }
 
