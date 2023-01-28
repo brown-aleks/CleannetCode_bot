@@ -25,4 +25,14 @@
     <ProjectReference Include="..\CleannetCode_bot\CleannetCode_bot.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Features\Achievements\" />
+    <Folder Include="Features\Forwards\" />
+    <Folder Include="Features\Homeworks\" />
+    <Folder Include="Features\Leaderboard\" />
+    <Folder Include="Features\Promotions\" />
+    <Folder Include="Features\Suggestions\" />
+    <Folder Include="Features\Welcome\" />
+  </ItemGroup>
+
 </Project>
