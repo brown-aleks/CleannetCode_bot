@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Unicode;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using File = System.IO.File;
 
 namespace CleannetCode_bot.Features.Welcome;
@@ -158,14 +159,18 @@ public class WelcomeHandler
         long id,
         Func<Task<T>> action,
         ConcurrentDictionary<long, SemaphoreSlim> concurrentDictionary,
-        [CallerArgumentExpression(nameof(concurrentDictionary))] string? lockName = default)
+        [CallerArgumentExpression(nameof(concurrentDictionary))]
+        string? lockName = default)
     {
         logger.LogDebug("Lock {LockName} element with id {Id}", id, lockName ?? "[no lock name]");
         var semaphore = concurrentDictionary.GetOrAdd(id, new SemaphoreSlim(1, 1));
         await semaphore.WaitAsync();
         try { return await action(); }
-        finally { semaphore.Release(); 
-            logger.LogDebug("Unlock {LockName} element with id {Id}", id, lockName ?? "[no lock name]");}
+        finally
+        {
+            semaphore.Release();
+            logger.LogDebug("Unlock {LockName} element with id {Id}", id, lockName ?? "[no lock name]");
+        }
     }
 
     private string GetFileName(long id)
@@ -178,13 +183,13 @@ public class WelcomeHandler
     {
         var fromId = member.Id;
         var user = new WelcomeUserInfo(fromId,
-            member.Username ?? member.FirstName,
+            member.Username ?? $"{member.FirstName}{(string.IsNullOrEmpty(member.LastName) ? string.Empty : " " + member.LastName)}",
             member.FirstName,
             member.LastName ?? string.Empty,
             State: State.Github);
-
         var githubMessage = await client.SendTextMessageAsync(chatId,
-            $"Привет! 👀👀👀 @{member.Username ?? member.FirstName}. Твой никнейм в гитхаб (ответь на это сообщение):");
+            entities: new[] { new MessageEntity() { Type = MessageEntityType.TextMention, User = member } },
+            text: $"Привет! 👀👀👀 @{user.Username}. Твой никнейм в гитхаб (ответь на это сообщение):");
         user = user with { GithubMessageId = githubMessage.MessageId };
         await SaveAsync(user);
     }
