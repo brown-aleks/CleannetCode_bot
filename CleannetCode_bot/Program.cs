@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using CleannetCode_bot.Features.Forwards;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,8 @@ namespace CleannetCode_bot
                 {
                     services.AddScoped<IBotService,BotService>();
                     services.AddScoped<IStorageService,StorageFileService>();
+                    services.AddScoped<IForwardHandler, ForwardsHandler>();
+                    services.Configure<ForwardsHandlerOptions>(context.Configuration.GetSection(ForwardsHandlerOptions.Section));
                     services.AddScoped<Handlers>();
                 })
                 .ConfigureLogging((logging) =>

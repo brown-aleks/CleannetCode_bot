@@ -37,19 +37,23 @@ namespace CleannetCode_bot
             // Начать получение не блокирует поток вызывающего абонента. Получение выполняется в пуле потоков.
             ReceiverOptions receiverOptions = new()
             {
-                AllowedUpdates = Array.Empty<UpdateType>() // получать все типы обновлений
+                AllowedUpdates = new[]
+                {
+                    UpdateType.Message
+                }// получать все типы обновлений
             };
 
-            botClient.StartReceiving(
+            var me = await botClient.GetMeAsync();
+
+            logger.LogInformation("{DateTime:dd.MM.yyyy HH:mm:ss:ffff}\tHey! I am {BotName}", DateTime.Now, me.Username);
+
+            await botClient.ReceiveAsync(
                 updateHandler: HandleUpdateAsync,
                 pollingErrorHandler: HandlePollingErrorAsync,
                 receiverOptions: receiverOptions,
                 cancellationToken: cts.Token
             );
 
-            var me = await botClient.GetMeAsync();
-
-            logger.LogInformation("{DateTime:dd.MM.yyyy HH:mm:ss:ffff}\tHey! I am {BotName}", DateTime.Now, me.Username);
 
             Console.ReadKey();
 
@@ -67,7 +71,7 @@ namespace CleannetCode_bot
 
             return update.Type switch
             {
-                UpdateType.Message => handlers.MessageAsync(update.Message, cts),
+                UpdateType.Message => handlers.MessageAsync(update.Message, botClient, cts),
                 UpdateType.InlineQuery => handlers.InlineQueryAsync(update.InlineQuery, cts),
                 UpdateType.ChosenInlineResult => handlers.ChosenInlineResultAsync(update.ChosenInlineResult, cts),
                 UpdateType.CallbackQuery => handlers.CallbackQueryAsync(update.CallbackQuery, cts),
