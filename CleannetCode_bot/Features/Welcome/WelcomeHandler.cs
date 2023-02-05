@@ -1,65 +1,31 @@
-﻿using System.Collections.Concurrent;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
+using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Unicode;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using File = System.IO.File;
 
 namespace CleannetCode_bot.Features.Welcome;
 
-public record Position(int Id, string Name);
-
-public enum State
-{
-    Github,
-    Youtube,
-    Position,
-    End
-}
-
-public record WelcomeUserInfo(
-    long Id,
-    string Username,
-    string FirstName,
-    string LastName,
-    long? YoutubeMessageId,
-    string? Youtube,
-    long? GithubMessageId,
-    string? Github,
-    long? PositionMessageId,
-    int? PositionId,
-    State State);
-
 public class WelcomeHandler
 {
-    private readonly ITelegramBotClient _client;
-
-    private ConcurrentDictionary<long, SemaphoreSlim> _writeSemaphoreSlims = new();
-
-    private async Task SaveAsync(WelcomeUserInfo info)
+    private readonly JsonSerializerOptions jsonSerializerOptions = new()
     {
-        using var semaphore = _writeSemaphoreSlims.GetOrAdd(info.Id, new SemaphoreSlim(1, 1));
-        await semaphore.WaitAsync();
-        await using var fileStream = File.OpenWrite(Path.Combine("Welcomes", info.Id.ToString()));
-        await JsonSerializer.SerializeAsync(fileStream, info);
-    }
+        Encoder = JavaScriptEncoder.Create(UnicodeRanges.BasicLatin, UnicodeRanges.Cyrillic),
+        WriteIndented = true
+    };
 
-    private async Task<WelcomeUserInfo?> ReadAsync(long id)
-    {
-        using var semaphore = _writeSemaphoreSlims.GetOrAdd(id, new SemaphoreSlim(1, 1));
-        await semaphore.WaitAsync();
-        var fileName = GetFileName(id);
-        if (!File.Exists(fileName)) return null;
-        await using var fileStream = File.OpenWrite(fileName);
-        var result = await JsonSerializer.DeserializeAsync<WelcomeUserInfo>(fileStream);
-        return result;
-    }
+    private readonly IConfiguration config;
+    private readonly ILogger<WelcomeHandler> logger;
+    private readonly ITelegramBotClient client;
 
-    private static string GetFileName(long id)
-    {
-        return Path.Combine("Welcomes", id.ToString());
-    }
-
-    private static readonly ConcurrentDictionary<long, long> RepliesMessage = new();
+    private readonly ConcurrentDictionary<long, SemaphoreSlim> writeSemaphoreSlims = new();
+    private readonly ConcurrentDictionary<long, SemaphoreSlim> workWithStateSemaphoreSlims = new();
 
     private static readonly Dictionary<int, Position> Positions = new()
     {
@@ -71,95 +37,160 @@ public class WelcomeHandler
         { 6, new(6, "Лид") },
     };
 
-    public WelcomeHandler(ITelegramBotClient client)
+    public WelcomeHandler(ITelegramBotClient client, IConfiguration config, ILogger<WelcomeHandler> logger)
     {
-        _client = client;
+        this.client = client;
+        this.config = config;
+        this.logger = logger;
     }
 
-    public async Task ReplyHandle(Message message)
+    public async Task HandleAnswersAsync(Message message)
     {
         if (message.From is null
             || message.ReplyToMessage is null
-            || message.Text is null
-            || !RepliesMessage.TryGetValue(message.ReplyToMessage.MessageId, out var userId))
+            || message.Text is null)
             return;
 
-        var user = await ReadAsync(userId);
-        if (user is null)
-            return;
+        _ = await LockAsync(message.From.Id,
+            async () =>
+            {
+                var user = await ReadAsync(message.From.Id);
+                if (user is null)
+                    return true;
 
-        switch (user.State)
-        {
-            case State.Github:
-                await HandleGithubAsync(message.Text, message.Chat.Id, user);
-                break;
-            case State.Youtube:
-                await HandleYoutube(message.Text, message.Chat.Id, user);
-                break;
-            case State.Position:
-                await HandleGithubAsync(message.Text, message.Chat.Id, user);
-                break;
-            case State.End:
-                return;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(message));
-        }
+                switch (user.State)
+                {
+                    case State.Github when message.ReplyToMessage.MessageId == user.GithubMessageId:
+                        await HandleGithubAnswerAsync(message.Text, message.MessageId, message.Chat.Id, user);
+                        break;
+                    case State.Youtube when message.ReplyToMessage.MessageId == user.YoutubeMessageId:
+                        await HandleYoutubeAnswerAsync(message.Text, message.MessageId, message.Chat.Id, user);
+                        break;
+                    case State.Position when message.ReplyToMessage.MessageId == user.PositionMessageId:
+                        await HandlePositionAnswerAsync(message.Text, message.MessageId, message.Chat.Id, user);
+                        break;
+                    case State.None:
+                    case State.End:
+                    default:
+                        break;
+                }
+                return true;
+            },
+            workWithStateSemaphoreSlims);
     }
 
-    private async Task HandleGithubAsync(string text, long chatId, WelcomeUserInfo user)
+    private async Task HandleGithubAnswerAsync(string text, int messageId, long chatId, WelcomeUserInfo user)
     {
-        var message = await _client.SendTextMessageAsync(chatId,
-            $"@{user.Username}, А твой ник на ютьюбе (ответь на это сообщение):");
-        user = user with { Github = text, YoutubeMessageId = message.MessageId, State = State.Youtube };
+        var message = await client.SendTextMessageAsync(chatId,
+            $"@{user.Username}, А твой ник на ютьюбе (ответь на это сообщение):",
+            replyToMessageId: messageId);
+        user = user with { GithubNick = text, YoutubeMessageId = message.MessageId, State = State.Youtube };
         await SaveAsync(user);
-        RepliesMessage.AddOrUpdate(message.MessageId, user.Id, (_, _) => user.Id);
     }
 
-    private async Task HandleYoutube(string text, long chatId, WelcomeUserInfo user)
+    private async Task HandleYoutubeAnswerAsync(string text, int messageId, long chatId, WelcomeUserInfo user)
     {
-        var message = await _client.SendTextMessageAsync(chatId,
-            $"@{user.Username}, А уровень (Учусь, Стажируюсь, Джуниор, Мидл, Сеньер, Лид) (ответь на это сообщение):");
-        user = user with { Youtube = text, PositionMessageId = message.MessageId, State = State.Position };
+        var message = await client.SendTextMessageAsync(chatId,
+            $"@{user.Username}, А уровень (Учусь, Стажируюсь, Джуниор, Мидл, Сеньер, Лид) (ответь на это сообщение):",
+            replyToMessageId: messageId);
+        user = user with { YoutubeNick = text, PositionMessageId = message.MessageId, State = State.Position };
         await SaveAsync(user);
-        RepliesMessage.AddOrUpdate(message.MessageId, user.Id, (_, _) => user.Id);
     }
 
-    private async Task HandlePosition(string text, long messageId, long chatId, WelcomeUserInfo user)
+    private async Task HandlePositionAnswerAsync(string positionAnswer, int messageId, long chatId, WelcomeUserInfo user)
     {
+        positionAnswer = positionAnswer.ToLower().Trim();
         var selected = Positions.Select(x => x.Value)
-            .FirstOrDefault(x => x.Name.Equals(text, StringComparison.CurrentCultureIgnoreCase));
+            .FirstOrDefault(x => x.Name.Equals(positionAnswer, StringComparison.CurrentCultureIgnoreCase));
         if (selected is not null)
         {
-            user = user with { PositionId = selected.Id, State = State.End };
+            user = user with { Position = selected, PositionId = selected.Id, State = State.End };
             await SaveAsync(user);
-            RepliesMessage.Remove(messageId, out _);
+            await client.SendTextMessageAsync(chatId,
+                $"@{user.Username}, Анкета успешно собрана! 👌😁👍",
+                replyToMessageId: messageId);
+            logger.LogDebug("Finish taking user survey {Position}", selected);
         }
-
-        var message = await _client.SendTextMessageAsync(chatId,
-            $"@{user.Username}, А уровень (Учусь, Стажируюсь, Джуниор, Мидл, Сеньер, Лид) (ответь на это сообщение еще раз):");
-        user = user with { PositionMessageId = message.MessageId };
-        await SaveAsync(user);
-        RepliesMessage.AddOrUpdate(message.MessageId, user.Id, (_, _) => user.Id);
+        else
+        {
+            logger.LogDebug("Trying to recheck position {Position}", positionAnswer);
+            var message = await client.SendTextMessageAsync(chatId,
+                $"@{user.Username}, Не понял 🤨. Твой уровень из списка (Учусь, Стажируюсь, Джуниор, Мидл, Сеньер, Лид) (ответь на это сообщение):",
+                replyToMessageId: messageId);
+            user = user with { PositionMessageId = message.MessageId };
+            await SaveAsync(user);
+        }
     }
 
-    public async Task WelcomeMemberHandle(User user, long chatId)
+    private async Task SaveAsync(WelcomeUserInfo user)
     {
-        var fromId = user.Id;
-        var nick = user.FirstName;
-        var githubMessage = await _client.SendTextMessageAsync(chatId,
-            $"Привет! 👀👀👀 @{nick}. Твой никнейм в гитхаб (ответь на это сообщение):");
-        var userInfo = new WelcomeUserInfo(fromId,
-            user.Username ?? string.Empty,
-            user.FirstName,
-            user.LastName ?? string.Empty,
-            null,
-            string.Empty,
-            githubMessage.MessageId,
-            string.Empty,
-            null,
-            null,
-            State.Github);
-        RepliesMessage.AddOrUpdate(githubMessage.MessageId, fromId, (_, _) => fromId);
-        await SaveAsync(userInfo);
+        _ = await LockAsync(user.Id,
+            async () =>
+            {
+                var fileName = GetFileName(user.Id);
+                var directoryName = Path.GetDirectoryName(fileName)!;
+                if (!Directory.Exists(directoryName))
+                    Directory.CreateDirectory(directoryName);
+                await using var fileStream = File.OpenWrite(fileName);
+                fileStream.SetLength(0);
+                await JsonSerializer.SerializeAsync(fileStream, user, jsonSerializerOptions);
+                logger.LogDebug("Saved user {User}", user);
+                return true;
+            },
+            writeSemaphoreSlims);
+    }
+
+    private async Task<WelcomeUserInfo?> ReadAsync(long id)
+    {
+        return await LockAsync(id,
+            async () =>
+            {
+                var fileName = GetFileName(id);
+                if (!File.Exists(fileName)) return null;
+                await using var fileStream = File.OpenRead(fileName);
+                var user = await JsonSerializer.DeserializeAsync<WelcomeUserInfo>(fileStream, jsonSerializerOptions);
+                logger.LogDebug("Read user {User}", user);
+                return user;
+            },
+            writeSemaphoreSlims);
+    }
+
+    private async Task<T> LockAsync<T>(
+        long id,
+        Func<Task<T>> action,
+        ConcurrentDictionary<long, SemaphoreSlim> concurrentDictionary,
+        [CallerArgumentExpression(nameof(concurrentDictionary))]
+        string? lockName = default)
+    {
+        logger.LogDebug("Lock {LockName} element with id {Id}", id, lockName ?? "[no lock name]");
+        var semaphore = concurrentDictionary.GetOrAdd(id, new SemaphoreSlim(1, 1));
+        await semaphore.WaitAsync();
+        try { return await action(); }
+        finally
+        {
+            semaphore.Release();
+            logger.LogDebug("Unlock {LockName} element with id {Id}", id, lockName ?? "[no lock name]");
+        }
+    }
+
+    private string GetFileName(long id)
+    {
+        var basePath = config["WelcomesPath"] ?? "Welcomes";
+        return Path.Combine(basePath, $"{id.ToString()}.json");
+    }
+
+    public async Task HandleChatMember(User member, long chatId)
+    {
+        var fromId = member.Id;
+        var user = new WelcomeUserInfo(fromId,
+            member.Username ?? $"{member.FirstName}{(string.IsNullOrEmpty(member.LastName) ? string.Empty : " " + member.LastName)}",
+            member.FirstName,
+            member.LastName ?? string.Empty,
+            State: State.Github);
+        var githubMessage = await client.SendTextMessageAsync(chatId,
+            entities: new[] { new MessageEntity() { Type = MessageEntityType.TextMention, User = member } },
+            text: $"Привет! 👀👀👀 @{user.Username}. Твой никнейм в гитхаб (ответь на это сообщение):");
+        user = user with { GithubMessageId = githubMessage.MessageId };
+        await SaveAsync(user);
     }
 }

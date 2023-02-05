@@ -1,65 +1,75 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Telegram.Bot;
-using Telegram.Bot.Types;
 
 namespace CleannetCode_bot.Features.Forwards
 {
-    internal class ForwardsHandler : IForwardHandler
+    public class ForwardsHandler : IForwardHandler
     {
-        private Dictionary<long, List<long>> _restrictedTopics;
-
-        private readonly IStorageService _storageService;
-        private readonly ITelegramBotClient _botClient;
+        private readonly IOptionsMonitor<ForwardsHandlerOptions> _forwardsHandlerOptionsMonitor;
         private readonly ILogger<ForwardsHandler> _logger;
-        private readonly string _directoryName = "forwards";
-        private readonly long _chatIdToForward = 1;
 
-        public ForwardsHandler(IStorageService storageService, ITelegramBotClient botClient, ILogger<ForwardsHandler> logger)
+        public ForwardsHandler(
+            IOptionsMonitor<ForwardsHandlerOptions> forwardsHandlerOptionsMonitor,
+            ILogger<ForwardsHandler> logger)
         {
-            _restrictedTopics = new Dictionary<long, List<long>>()
-            {
-                {1, new List<long>() { 1 } }
-            };
-
-            _storageService = storageService;
-            _botClient = botClient;
+            _forwardsHandlerOptionsMonitor = forwardsHandlerOptionsMonitor;
             _logger = logger;
         }
 
-        public async Task HandleAsync(Message message, CancellationToken ct)
+        public ForwardsHandlerOptions Options => _forwardsHandlerOptionsMonitor.CurrentValue;
+
+        public async Task HandleAsync(
+            long fromChatId,
+            int messageId,
+            bool isTopicMessage,
+            int topicId,
+            long senderId,
+            ITelegramBotClient botClient,
+            CancellationToken ct)
         {
-            var logPrefix = $"message: {message.MessageId}, chat: {message.Chat.Id}:";
+            var logPrefix = $"message: {messageId}, chat: {fromChatId}, topic: {topicId}, handler: {nameof(ForwardsHandler)}";
 
-            _logger.LogDebug($"{logPrefix} {nameof(ForwardsHandler)} called");
-
-            if (!_restrictedTopics.TryGetValue(message.Chat.Id, out var allowedUsers))
+            _logger.LogDebug("{Prefix}", logPrefix);
+            if (!isTopicMessage
+                || !Options.ChatsWithRestrictedTopicsWithAllowedUsersToWrite.TryGetValue(fromChatId, out var restrictedTopics))
             {
-                // чат не в списке запрещенных
-                _logger.LogDebug($"{logPrefix} Chat is not restricted");
+                _logger.LogDebug("{Prefix} chat isn't restricted", logPrefix);
                 return;
             }
 
-            // Проверяем пользователь в списке разрешенных
-            if (allowedUsers.Any(u => u == message.From.Id))
+            if (!restrictedTopics.TryGetValue(topicId, out var allowedUsersToWrite))
             {
-                // сообщения от пользователя разрешены
-                _logger.LogDebug($"{logPrefix} The user is in the allowed list in the chat");
+                _logger.LogDebug("{Prefix} chat's topic {Topic} isn't restricted", logPrefix, topicId);
                 return;
             }
 
-            _logger.LogInformation($"{logPrefix} Message is restricted, strting handling restricted message");
+            if (allowedUsersToWrite.Contains(senderId))
+            {
+                _logger.LogDebug("{Prefix} {User} of chat's topic {Topic} is allowed to write",
+                    logPrefix,
+                    senderId,
+                    topicId);
+                return;
+            }
 
-            // сохраняем сообщение
-            _logger.LogInformation($"{logPrefix} Saving message");
-            await _storageService.AddObject(message, typeof(Message), _directoryName, ct);
+            _logger.LogInformation("{Prefix} {User} of chat's topic {Topic} isn't allowed to write",
+                logPrefix,
+                senderId,
+                topicId);
+            var forwardingMap = Options.ChatsWithTopicsForwardMapping[fromChatId][topicId];
+            _logger.LogInformation("{Prefix} forward message of user {User} from {Topic} to chat {TargetChat} to topic {TargetTopic}",
+                logPrefix,
+                senderId,
+                topicId,
+                forwardingMap.ChatId,
+                forwardingMap.ThreadId);
 
-            // пересылаем сообщение в генерал
-            _logger.LogInformation($"{logPrefix} Forwarding message");
-            await _botClient.ForwardMessageAsync(_chatIdToForward, message.Chat.Id, message.MessageId, true, true, ct);
+            _logger.LogInformation("{Prefix} Forwarding message", logPrefix);
+            await botClient.ForwardMessageAsync(forwardingMap.ChatId, fromChatId, messageId, forwardingMap.ThreadId, true, true, ct);
 
-            // удаляем сообщение
-            _logger.LogInformation($"{logPrefix} Deleting message");
-            await _botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId, ct);
+            _logger.LogInformation("{Prefix} Deleting message", logPrefix);
+            await botClient.DeleteMessageAsync(fromChatId, messageId, ct);
         }
     }
 }
