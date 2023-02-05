@@ -7,6 +7,6 @@
 
         public Dictionary<long, Dictionary<int, ForwardingMap>> ChatsWithTopicsForwardMapping { get; set; } = new();
 
-        public record ForwardingMap(long ChatId, int ThreadId);
+        public record ForwardingMap(long ChatId, int? ThreadId);
     }
 }

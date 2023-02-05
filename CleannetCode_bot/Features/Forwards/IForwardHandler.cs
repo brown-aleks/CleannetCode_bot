@@ -1,4 +1,4 @@
-﻿using Telegram.Bot;
+using Telegram.Bot;
 
 namespace CleannetCode_bot.Features.Forwards
 {

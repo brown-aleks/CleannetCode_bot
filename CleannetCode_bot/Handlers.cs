@@ -1,4 +1,5 @@
-﻿using CleannetCode_bot.Features.Forwards;
+using CleannetCode_bot.Features.Forwards;
+using CleannetCode_bot.Features.Welcome;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Payments;
@@ -8,14 +9,21 @@ namespace CleannetCode_bot
     public class Handlers
     {
         private readonly IStorageService _storage;
+        private readonly WelcomeHandler _welcomeHandler;
         private readonly IForwardHandler _forwardHandler;
+        private readonly ITelegramBotClient _telegramBotClient;
 
-        public Handlers(IStorageService storage, IForwardHandler forwardHandler)
+        public Handlers(
+            IStorageService storage,
+            WelcomeHandler welcomeHandler,
+            IForwardHandler forwardHandler,
+            ITelegramBotClient telegramBotClient)
         {
-            this._storage = storage;
+            _storage = storage;
+            _welcomeHandler = welcomeHandler;
             _forwardHandler = forwardHandler;
+            _telegramBotClient = telegramBotClient;
         }
-
         public Task CallbackQueryAsync(CallbackQuery? callbackQuery, CancellationToken cts)
         {
             if (callbackQuery is null) { return Task.CompletedTask; }
@@ -72,44 +80,24 @@ namespace CleannetCode_bot
             return Task.CompletedTask;
         }
 
-        public async Task MessageAsync(Message? message, ITelegramBotClient telegramBotClient, CancellationToken cts)
+        public async Task MessageAsync(Message? message, CancellationToken cts)
         {
             if (message is null) { return; }
-            _storage.AddObject(message, typeof(Message), "Message", cts);
+            await _storage.AddObject(message, typeof(Message), "Message", cts);
+            await _welcomeHandler.HandleAnswersAsync(message);
+            if (message.From is not null && message.Text == "/welcome")
+            {
+                await _welcomeHandler.HandleChatMember(message.From, message.Chat.Id);
+            }
             if (message.From is null) { return; }
-           await  _forwardHandler.HandleAsync(message.Chat.Id,
+            await _forwardHandler.HandleAsync(
+                message.Chat.Id,
                 message.MessageId,
                 message.IsTopicMessage.GetValueOrDefault(),
                 message.MessageThreadId.GetValueOrDefault(),
                 message.From.Id,
-                telegramBotClient,
+                _telegramBotClient,
                 cts);
- #region reminder
-            //  Обнаружение команд к боту
-            /*
-                if (message.Text is { } messageText)
-                {
-                    if (messageText == "/stat")
-                    {
-                        var json = JsonSerializer.Serialize(_messages, optionsJson);
-
-                        Directory.CreateDirectory(_directory);
-                        string fileName = DateTime.Now.ToString("ddMMyyyy_HHmmss_ffff") + "-" + _fileName;
-                        string _path = Path.Combine(_directory, fileName);
-                        System.IO.File.WriteAllTextAsync(_path, json, cts);
-                    }
-                }
-            */
-
-            // Эхо полученного текста сообщения
-            /*
-            Message sentMessage = await botClient.SendTextMessageAsync(
-                chatId: chat.Id,
-                text: $"{message.ForwardSenderName} написал:\n" + messageText,  //  chat.Username
-                cancellationToken: cancellationToken,
-                replyToMessageId: message.MessageId);
-            */
-            #endregion
         }
 
         public Task MyChatMemberAsync(ChatMemberUpdated? myChatMember, CancellationToken cts)
@@ -135,17 +123,16 @@ namespace CleannetCode_bot
 
         public Task PreCheckoutQueryAsync(PreCheckoutQuery? preCheckoutQuery, CancellationToken cts)
         {
-            return Task.CompletedTask;//throw new NotImplementedException();
+            return Task.CompletedTask;
         }
 
         public Task ShippingQueryAsync(ShippingQuery? shippingQuery, CancellationToken cts)
         {
-            return Task.CompletedTask;//throw new NotImplementedException();
+            return Task.CompletedTask;
         }
 
         public Task UnknownAsync(Update update, CancellationToken cts)
         {
-            if (update is null) { return Task.CompletedTask; }
             _storage.AddObject(update, typeof(Update), "Unknown", cts);
             return Task.CompletedTask;
         }

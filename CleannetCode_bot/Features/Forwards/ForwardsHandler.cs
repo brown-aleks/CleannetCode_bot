@@ -8,8 +8,7 @@ namespace CleannetCode_bot.Features.Forwards
     {
         private readonly IOptionsMonitor<ForwardsHandlerOptions> _forwardsHandlerOptionsMonitor;
         private readonly ILogger<ForwardsHandler> _logger;
-        private const string DirectoryName = "forwards";
-        
+
         public ForwardsHandler(
             IOptionsMonitor<ForwardsHandlerOptions> forwardsHandlerOptionsMonitor,
             ILogger<ForwardsHandler> logger)

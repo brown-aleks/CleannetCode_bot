@@ -1,41 +1,52 @@
-﻿using CleannetCode_bot.Features.Forwards;
+using CleannetCode_bot.Features.Forwards;
+using CleannetCode_bot.Features.Welcome;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Serilog;
+using Telegram.Bot;
 
 namespace CleannetCode_bot
 {
-    public class Program
+    public static class Program
     {
         public static async Task Main(string[] args)
         {
-            IHost host = Host.CreateDefaultBuilder(args)
+            var host = Host.CreateDefaultBuilder(args)
                 .ConfigureAppConfiguration((hostingContext, configuration) =>
                 {
                     configuration.Sources.Clear();
 
-                    IHostEnvironment env = hostingContext.HostingEnvironment;
+                    var env = hostingContext.HostingEnvironment;
 
                     configuration
                         .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                         .AddJsonFile($"appsettings.{env.EnvironmentName}.json", true, true);
                 })
-                .ConfigureServices((context,services) =>
+                .ConfigureServices((context, services) =>
                 {
-                    services.AddScoped<IBotService,BotService>();
+                    services.AddHostedService<BotService>();
+                    services.AddSingleton<WelcomeHandler>();
+                    services.AddScoped<IStorageService, StorageFileService>();
                     services.AddScoped<IStorageService,StorageFileService>();
                     services.AddScoped<IForwardHandler, ForwardsHandler>();
                     services.Configure<ForwardsHandlerOptions>(context.Configuration.GetSection(ForwardsHandlerOptions.Section));
                     services.AddScoped<Handlers>();
+                    services.AddSingleton<ITelegramBotClient, TelegramBotClient>(_ =>
+                    {
+                        var accessToken = context.Configuration.GetValue<string>("AccessToken")!;
+                        return new(accessToken);
+                    });
                 })
-                .ConfigureLogging((logging) =>
+                .ConfigureLogging((context, logging) =>
                     logging.ClearProviders()
-                        .AddConsole())
+                        .AddSerilog(new LoggerConfiguration()
+                            .ReadFrom.Configuration(context.Configuration)
+                            .CreateLogger()))
                 .Build();
 
-            var svc = ActivatorUtilities.CreateInstance<BotService>(host.Services);
-            await svc.RunAsync();
+            await host.StartAsync();
         }
     }
 }
