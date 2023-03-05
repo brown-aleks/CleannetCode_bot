@@ -62,6 +62,7 @@ jobs:
     defaults:
       run:
         shell: bash
+        working-directory: ./terraform
       
     env:
       TF_VAR_hcloud_token: ${{ secrets.TF_VAR_HCLOUD_TOKEN }}
