@@ -173,10 +173,10 @@ Youtube: {youtubeName ?? "Не знаю"}\.",
 Telegram мы уже получили хе\-хе
 Осталось заполнить информацию о Youtube и Github
 
-{WelcomeBotCommandNames.ChangeGithubInfoCommand} \- показать информацию которую мы собрали
-{WelcomeBotCommandNames.ChangeYoutubeInfoCommand} \- удалить твои данные
-{WelcomeBotCommandNames.ClearMyInfoCommand} \- указать или изменить имя пользователся на Youtube
-{WelcomeBotCommandNames.GetMyInfoCommand} \- указать или изменить ник на Github",
+{WelcomeBotCommandNames.ChangeGithubInfoCommand} \- указать или изменить ник на Github,
+{WelcomeBotCommandNames.ChangeYoutubeInfoCommand} \- указать или изменить имя пользователся на Youtube,
+{WelcomeBotCommandNames.ClearMyInfoCommand} \- удалить твои данные,
+{WelcomeBotCommandNames.GetMyInfoCommand} \- показать информацию которую мы собрали",
             parseMode: ParseMode.MarkdownV2,
             replyMarkup: KeyboardMarkup,
             cancellationToken: cancellationToken);
