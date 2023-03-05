@@ -1,16 +1,16 @@
 # Set the variable value in *.tfvars file
 # or using the -var="hcloud_token=..." CLI option
 variable "hcloud_token" {
-  sensitive   = true
+  sensitive = true
 }
 variable "telegram_bot_token" {
-  sensitive   = true
+  sensitive = true
 }
 variable "ssh_private_key" {
-  sensitive   = true
+  sensitive = true
 }
 variable "ssh_public_key" {
-  sensitive   = true
+  sensitive = true
 }
 
 # Configure the Hetzner Cloud Provider
