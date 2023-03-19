@@ -49,8 +49,14 @@ jobs:
       
     - name: Push new version tag
       run: git push origin v${{ env.GitVersion_SemVer }}
+      
+    - name: Return version tag
+      id: version-tag
+      run: echo "VERSION_TAG="v${{ env.GitVersion_SemVer }} >> $GITHUB_OUTPUT
     
-#   run_terraform:
-#     needs: [tag]
-#     uses: cleannetcode/CleannetCode_bot/.github/workflows/terraform.yml@master
-#     secrets: inherit
+  run_terraform:
+    needs: [tag]
+    uses: cleannetcode/CleannetCode_bot/.github/workflows/terraform.yml@master
+    with:
+      tag: ${{ job.steps.version-tag.outputs.VERSION_TAG }}"
+    secrets: inherit
