@@ -12,6 +12,9 @@ variable "ssh_private_key" {
 variable "ssh_public_key" {
   sensitive = true
 }
+variable "image_version" {
+  sensitive = true
+}
 
 # Configure the Hetzner Cloud Provider
 provider "hcloud" {
@@ -52,7 +55,7 @@ resource "null_resource" "up_bot_container" {
   provisioner "remote-exec" {
     inline = [
       "docker rm -f $(docker ps -a -q)",
-      "docker pull pingvin1308/cleannetcode.bot:0.0.1",
+      "docker pull pingvin1308/cleannetcode.bot:${var.image_version}",
       "docker run -d -e AccessToken=${var.telegram_bot_token} -v /bot_data/Data:/app/Data -v /bot_data/FileStorage:/app/FileStorage pingvin1308/cleannetcode.bot:0.0.1",
       "docker container ls"
     ]
