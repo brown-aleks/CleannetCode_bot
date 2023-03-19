@@ -28,7 +28,8 @@ jobs:
       run: dotnet test --no-build --verbosity normal
       
   tag:
-    
+    needs: [build]
+        
     runs-on: ubuntu-latest
     
     steps:
