@@ -8,6 +8,25 @@ permissions:
   contents: read
 
 jobs:
+  build_image:
+    name: "Build docker image"
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      # Checkout the repository to the GitHub Actions runner
+      - name: Checkout
+        uses: actions/checkout@v3
+    
+      - name: Build docker image
+      - run: docker build -t pingvin1308/cleannetcode.bot:0.0.2 -f .\CleannetCode_bot\Dockerfile .
+      
+      - name: docker login
+      - run: docker login -u ${{ secrets.DOCKER_USER_NAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+      
+      - name: Push docker image
+      - run: docker push pingvin1308/cleannetcode.bot:0.0.1
+
   terraform:
     name: 'Terraform'
     runs-on: ubuntu-latest
