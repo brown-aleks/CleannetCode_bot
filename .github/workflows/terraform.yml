@@ -1,14 +1,7 @@
 name: 'Terraform'
 
 on:
-  workflow_run:
-    branches: [master]
-    workflows: [.NET]
-    types:
-        - completed
-  push:
-    tags:
-    - '*'
+  workflow_dispatch:
 
 permissions:
   contents: read
