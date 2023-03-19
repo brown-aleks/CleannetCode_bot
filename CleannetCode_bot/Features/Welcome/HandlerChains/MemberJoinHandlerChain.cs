@@ -22,10 +22,12 @@ public class CommunityInfoHandlerChain : WelcomePrivateHandlerChain
 
     protected override async Task<Result> ProcessUserAsync(long userId, WelcomeUserInfo user, string text, CancellationToken cancellationToken)
     {
-        if (text != WelcomeBotCommandNames.ChangeGithubInfoCommand)
+        if (text != WelcomeBotCommandNames.ShowCommunityInfo)
             return WelcomeHandlerHelpers.NotMatchingStateResult;
-        
-        await WelcomeBotClient.SendGithubPromptAsync(
+
+        await WelcomeBotClient.SendWelcomeMessageInPersonalChatAsync(
+            username: user.Username,
+            userId: user.Id,
             chatId: user.PersonalChatId!.Value,
             cancellationToken: cancellationToken);
         return Result.Success();
