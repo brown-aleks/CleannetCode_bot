@@ -36,6 +36,6 @@ jobs:
     - uses: actions/checkout@v3
     - name: Setup .NET
       run: echo 'test'
-    - uses: cleannetcode/CleannetCode_bot/.github/workflows/terraform.yml
+    - uses: cleannetcode/CleannetCode_bot/.github/workflows/terraform.yml@master
     
     
