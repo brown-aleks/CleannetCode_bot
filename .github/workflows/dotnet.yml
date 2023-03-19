@@ -39,7 +39,7 @@ jobs:
     
   run_terraform:
     needs: [tag]
-    uses: org/repo/.github/workflows/build.yml@main
+    uses: cleannetcode/CleannetCode_bot/.github/workflows/terraform.yml@main
     
     
     
