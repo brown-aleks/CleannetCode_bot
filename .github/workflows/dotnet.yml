@@ -53,3 +53,4 @@ jobs:
   run_terraform:
     needs: [tag]
     uses: cleannetcode/CleannetCode_bot/.github/workflows/terraform.yml@master
+    secrets: inherit
