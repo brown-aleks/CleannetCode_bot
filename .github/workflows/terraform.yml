@@ -6,6 +6,9 @@ on:
     workflows: [.NET]
     types:
         - completed
+  push:
+    tags:
+    - '*'
 
 permissions:
   contents: read
