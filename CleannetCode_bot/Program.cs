@@ -92,7 +92,7 @@ public static class Program
                             resolver: x => x.Update.PollAnswer));
 
                     services.AddScoped<IGenericStorageService, StorageFileService>();
-                    services.AddScoped<IForwardHandler, ForwardsHandler>();
+                    // services.AddScoped<IForwardHandler, ForwardsHandler>();
                     services.AddScoped<Handlers>();
                 })
             .ConfigureLogging(

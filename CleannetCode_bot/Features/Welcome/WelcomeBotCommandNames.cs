@@ -6,5 +6,6 @@ public class WelcomeBotCommandNames
     public const string ClearMyInfoCommand = "/clearmyinfo";
     public const string ChangeYoutubeInfoCommand = "/changeyoutubeinfo";
     public const string ChangeGithubInfoCommand = "/changegithubinfo";
+    public const string ShowCommunityInfo = "/showcommunityinfo";
     public const string StartCommand = "/start";
 }

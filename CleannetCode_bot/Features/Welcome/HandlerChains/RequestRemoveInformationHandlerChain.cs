@@ -4,14 +4,14 @@ using Microsoft.Extensions.Logging;
 
 namespace CleannetCode_bot.Features.Welcome.HandlerChains;
 
-public class WelcomeYoutubePromptHandlerChain : WelcomePrivateHandlerChain
+public class RequestRemoveInformationHandlerChain : WelcomePrivateHandlerChain
 {
-    private readonly ILogger<WelcomeYoutubePromptHandlerChain> _logger;
+    private readonly ILogger<RequestRemoveInformationHandlerChain> _logger;
 
-    public WelcomeYoutubePromptHandlerChain(
+    public RequestRemoveInformationHandlerChain(
         IWelcomeBotClient welcomeBotClient,
         IGenericRepository<long, WelcomeUserInfo> welcomeUserInfoRepository,
-        ILogger<WelcomeYoutubePromptHandlerChain> logger) : base(
+        ILogger<RequestRemoveInformationHandlerChain> logger) : base(
         welcomeBotClient: welcomeBotClient,
         welcomeUserInfoRepository: welcomeUserInfoRepository)
     {
@@ -20,27 +20,19 @@ public class WelcomeYoutubePromptHandlerChain : WelcomePrivateHandlerChain
 
     protected override WelcomeUserInfoState TargetState => WelcomeUserInfoState.Idle;
 
-    protected async override Task<Result> ProcessUserAsync(
+    protected override async Task<Result> ProcessUserAsync(
         long userId,
         WelcomeUserInfo user,
         string text,
         CancellationToken cancellationToken)
     {
-        if (text != WelcomeBotCommandNames.ChangeYoutubeInfoCommand)
+        if (text != WelcomeBotCommandNames.ClearMyInfoCommand)
             return WelcomeHandlerHelpers.NotMatchingStateResult;
-
-        await WelcomeUserInfoRepository.SaveAsync(
-            key: userId,
-            entity: user with
-            {
-                State = WelcomeUserInfoState.AskingYoutube
-            },
-            cancellationToken: cancellationToken);
-        await WelcomeBotClient.SendYoutubePromptAsync(
+        await WelcomeUserInfoRepository.RemoveAsync(key: userId, cancellationToken: cancellationToken);
+        await WelcomeBotClient.SendInformationRemovedSuccessfulAsync(
             chatId: user.PersonalChatId!.Value,
             cancellationToken: cancellationToken);
-        // TODO: Сделать проверку на существование профиля в Github
-        _logger.LogInformation(message: "{Result}", "Success youtube prompt");
+        _logger.LogInformation(message: "{Result}", "Success information remove");
         return Result.Success();
     }
 }

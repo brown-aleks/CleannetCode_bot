@@ -4,42 +4,40 @@ using Microsoft.Extensions.Logging;
 
 namespace CleannetCode_bot.Features.Welcome.HandlerChains;
 
-public class WelcomeGithubPromptHandlerChain : WelcomePrivateHandlerChain
+public class GithubAnswerHandlerChain : WelcomePrivateHandlerChain
 {
-    private readonly ILogger<WelcomeGithubPromptHandlerChain> _logger;
+    private readonly ILogger<GithubAnswerHandlerChain> _logger;
 
-    public WelcomeGithubPromptHandlerChain(
+    public GithubAnswerHandlerChain(
         IWelcomeBotClient welcomeBotClient,
         IGenericRepository<long, WelcomeUserInfo> welcomeUserInfoRepository,
-        ILogger<WelcomeGithubPromptHandlerChain> logger) : base(
+        ILogger<GithubAnswerHandlerChain> logger) : base(
         welcomeBotClient: welcomeBotClient,
         welcomeUserInfoRepository: welcomeUserInfoRepository)
     {
         _logger = logger;
     }
 
-    protected override WelcomeUserInfoState TargetState => WelcomeUserInfoState.Idle;
+    protected override WelcomeUserInfoState TargetState => WelcomeUserInfoState.AskingGithub;
 
-    protected async override Task<Result> ProcessUserAsync(
+    protected override async Task<Result> ProcessUserAsync(
         long userId,
         WelcomeUserInfo user,
         string text,
         CancellationToken cancellationToken)
     {
-        if (text != WelcomeBotCommandNames.ChangeGithubInfoCommand)
-            return WelcomeHandlerHelpers.NotMatchingStateResult;
-
         await WelcomeUserInfoRepository.SaveAsync(
             key: userId,
             entity: user with
             {
-                State = WelcomeUserInfoState.AskingGithub
+                GithubNick = text, State = WelcomeUserInfoState.Idle
             },
             cancellationToken: cancellationToken);
-        await WelcomeBotClient.SendGithubPromptAsync(
+        await WelcomeBotClient.SendGithubConfirmedAsync(
             chatId: user.PersonalChatId!.Value,
             cancellationToken: cancellationToken);
-        _logger.LogInformation(message: "{Result}", "Success github prompt");
+        // TODO: Сделать проверку на существование профиля в Github
+        _logger.LogInformation(message: "{Result}", "Success github answer handling");
         return Result.Success();
     }
 }

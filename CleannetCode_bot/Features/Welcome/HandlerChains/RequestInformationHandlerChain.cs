@@ -4,14 +4,14 @@ using Microsoft.Extensions.Logging;
 
 namespace CleannetCode_bot.Features.Welcome.HandlerChains;
 
-public class WelcomeRequestRemoveInformationHandlerChain : WelcomePrivateHandlerChain
+public class RequestInformationHandlerChain : WelcomePrivateHandlerChain
 {
-    private readonly ILogger<WelcomeRequestRemoveInformationHandlerChain> _logger;
+    private readonly ILogger<RequestInformationHandlerChain> _logger;
 
-    public WelcomeRequestRemoveInformationHandlerChain(
+    public RequestInformationHandlerChain(
         IWelcomeBotClient welcomeBotClient,
         IGenericRepository<long, WelcomeUserInfo> welcomeUserInfoRepository,
-        ILogger<WelcomeRequestRemoveInformationHandlerChain> logger) : base(
+        ILogger<RequestInformationHandlerChain> logger) : base(
         welcomeBotClient: welcomeBotClient,
         welcomeUserInfoRepository: welcomeUserInfoRepository)
     {
@@ -20,19 +20,21 @@ public class WelcomeRequestRemoveInformationHandlerChain : WelcomePrivateHandler
 
     protected override WelcomeUserInfoState TargetState => WelcomeUserInfoState.Idle;
 
-    protected async override Task<Result> ProcessUserAsync(
+    protected override async Task<Result> ProcessUserAsync(
         long userId,
         WelcomeUserInfo user,
         string text,
         CancellationToken cancellationToken)
     {
-        if (text != WelcomeBotCommandNames.ClearMyInfoCommand)
+        if (text != WelcomeBotCommandNames.GetMyInfoCommand)
             return WelcomeHandlerHelpers.NotMatchingStateResult;
-        await WelcomeUserInfoRepository.RemoveAsync(key: userId, cancellationToken: cancellationToken);
-        await WelcomeBotClient.SendInformationRemovedSuccessfulAsync(
+        await WelcomeBotClient.SendInformationAsync(
             chatId: user.PersonalChatId!.Value,
+            username: user.Username,
+            githubNick: user.GithubNick,
+            youtubeName: user.YoutubeName,
             cancellationToken: cancellationToken);
-        _logger.LogInformation(message: "{Result}", "Success information remove");
+        _logger.LogInformation(message: "{Result}", "Success return information");
         return Result.Success();
     }
 }

@@ -25,17 +25,6 @@ public class WelcomeBotClient : IWelcomeBotClient
 
     private WelcomeBotClientOptions Options => _optionsMonitor.CurrentValue;
 
-
-    private static ReplyKeyboardMarkup KeyboardMarkup =>
-        new(
-            new[]
-            {
-                new KeyboardButton(WelcomeBotCommandNames.ChangeGithubInfoCommand),
-                new KeyboardButton(WelcomeBotCommandNames.ChangeYoutubeInfoCommand),
-                new KeyboardButton(WelcomeBotCommandNames.ClearMyInfoCommand),
-                new KeyboardButton(WelcomeBotCommandNames.GetMyInfoCommand)
-            });
-
     public async Task SendWelcomeMessageInCommonChatAsync(
         string username,
         long userId,
@@ -64,7 +53,7 @@ public class WelcomeBotClient : IWelcomeBotClient
     {
         await _telegramBotClient.SendTextMessageAsync(
             chatId: chatId,
-            text: @"Твое имя на Youtube\. Служит для идентификации тебя на стримах: ",
+            text: @"Твое никнейм на Youtube\. Служит для идентификации тебя на стримах: ",
             parseMode: ParseMode.MarkdownV2,
             cancellationToken: cancellationToken);
     }
@@ -158,27 +147,32 @@ Youtube: {youtubeName ?? "Не знаю"}\.",
         await _telegramBotClient.SendTextMessageAsync(
             chatId: chatId,
             text: $@"Снова привет {GetUserLink(username: username, userId: userId)}
-В нашем комьюнити ты сможешь найти много чего интересного\.
 
+Прежде чем продолжить общение, давайте убедимся, что вы на правильном пути.
+Разработка для вас – это серьезное увлечение, вы хотите разобраться и научиться, или уже обладаете навыками и хотите проверить свои умения.
+В нашем комьюнити каждый участник найдет свое дело :)
+
+Новичкам мы полезны тем, что предоставляем поддержку в изучении программирования.
+Опытные разработчики могут улучшить свои soft skills, преодолеть синдром самозванца и получить удовлетворение от оказания помощи другим участникам.
+
+
+В нашем комьюнити ты сможешь найти много интересного, ниже представлены все основные ссылки\.
 [Наш основной чат](https://t.me/cleannetcode)
-[Стримы тут](https://www.youtube.com/@TrufanovRoman)
-[Домашки тут](https://github.com/cleannetcode/Index/discussions)
+[Стримы тут](https://www.youtube.com/@Cleannetcode)
+[Гитхаб нашего комьюнити](https://github.com/cleannetcode)
+[LinkedIn группа](https://www.linkedin.com/groups/9315319/)
+Занятия и домашние задания пока доступны в виде видео и стримов на YouTube, но мы разрабатываем отдельную платформу для этого.
+Мониторинг прогресса и система достижений также в процессе разработки.
 
-Чтобы наиболее активно участвовать в сообществе:
+Чтобы максимально активно участвовать в сообществе и получать ревью домашних заданий и проектов, а также отслеживать свой прогресс, нам нужна информация о ваших аккаунтах в Telegram, Github и YouTube (личная персональная информация не требуется).
+Информацию о вашем аккаунте в Telegram мы уже получили - хе-хе.
+Осталось заполнить данные о YouTube и Github.
 
-\- Получать, сдавать и получать ревью домашек и проектов\.
-\- Отслеживать ваш прогресс по изучаению разработки\.
-
-Нам нужна информация о ваших аккаунтов из Telegram, Github и Youtube \(личная персональная информация не требуется\)\.
-Telegram мы уже получили хе\-хе
-Осталось заполнить информацию о Youtube и Github
-
-{WelcomeBotCommandNames.ChangeGithubInfoCommand} \- показать информацию которую мы собрали
-{WelcomeBotCommandNames.ChangeYoutubeInfoCommand} \- удалить твои данные
-{WelcomeBotCommandNames.ClearMyInfoCommand} \- указать или изменить имя пользователся на Youtube
-{WelcomeBotCommandNames.GetMyInfoCommand} \- указать или изменить ник на Github",
+{WelcomeBotCommandNames.ChangeGithubInfoCommand} \- показать собранную информацию
+{WelcomeBotCommandNames.ChangeYoutubeInfoCommand} \- удалить ваши данные
+{WelcomeBotCommandNames.ClearMyInfoCommand} \- указать или изменить никнейм пользователя на Youtube
+{WelcomeBotCommandNames.GetMyInfoCommand} \- указать или изменить Github никнейм",
             parseMode: ParseMode.MarkdownV2,
-            replyMarkup: KeyboardMarkup,
             cancellationToken: cancellationToken);
     }
 

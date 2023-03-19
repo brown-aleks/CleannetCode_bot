@@ -5,16 +5,16 @@ using Microsoft.Extensions.Logging;
 
 namespace CleannetCode_bot.Features.Welcome.HandlerChains;
 
-public class WelcomePrivateStartHandlerChain : IHandlerChain
+public class PrivateStartHandlerChain : IHandlerChain
 {
-    private readonly ILogger<WelcomePrivateStartHandlerChain> _logger;
+    private readonly ILogger<PrivateStartHandlerChain> _logger;
     private readonly IWelcomeBotClient _welcomeBotClient;
     private readonly IGenericRepository<long, WelcomeUserInfo> _welcomeUserInfoRepository;
 
-    public WelcomePrivateStartHandlerChain(
+    public PrivateStartHandlerChain(
         IWelcomeBotClient welcomeBotClient,
         IGenericRepository<long, WelcomeUserInfo> welcomeUserInfoRepository,
-        ILogger<WelcomePrivateStartHandlerChain> logger)
+        ILogger<PrivateStartHandlerChain> logger)
     {
         _welcomeBotClient = welcomeBotClient;
         _welcomeUserInfoRepository = welcomeUserInfoRepository;
