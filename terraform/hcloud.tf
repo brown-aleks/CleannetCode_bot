@@ -56,7 +56,7 @@ resource "null_resource" "up_bot_container" {
     inline = [
       "docker rm -f $(docker ps -a -q)",
       "docker pull pingvin1308/cleannetcode.bot:${var.image_version}",
-      "docker run -d -e AccessToken=${var.telegram_bot_token} -v /bot_data/Data:/app/Data -v /bot_data/FileStorage:/app/FileStorage pingvin1308/cleannetcode.bot:0.0.1",
+      "docker run -d -e AccessToken=${var.telegram_bot_token} -v /bot_data/Data:/app/Data -v /bot_data/FileStorage:/app/FileStorage pingvin1308/cleannetcode.bot:${var.image_version}",
       "docker container ls"
     ]
   }
