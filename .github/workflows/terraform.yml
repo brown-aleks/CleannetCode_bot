@@ -24,7 +24,7 @@ jobs:
           fetch-depth: 0
           
       - name: Build docker image
-        run: docker build -t pingvin1308/cleannetcode.bot:${{ inputs.tag }} -f .\CleannetCode_bot\Dockerfile .
+        run: docker build -t pingvin1308/cleannetcode.bot:${{ inputs.tag }} -f ./CleannetCode_bot/Dockerfile .
       
       - name: docker login
         run: docker login -u ${{ secrets.DOCKER_USER_NAME }} -p ${{ secrets.DOCKER_PASSWORD }}
