@@ -1,8 +1,8 @@
 name: 'Terraform'
 
 on:
-  workflow_dispatch:
-  workflow_call:
+  push:
+    tags: '*'
 
 permissions:
   contents: read
@@ -19,15 +19,16 @@ jobs:
         uses: actions/checkout@v3
     
       - name: Build docker image
-        run: docker build -t pingvin1308/cleannetcode.bot:0.0.2 -f .\CleannetCode_bot\Dockerfile .
+        run: docker build -t pingvin1308/cleannetcode.bot:${{ github.ref_name }} -f .\CleannetCode_bot\Dockerfile .
       
       - name: docker login
         run: docker login -u ${{ secrets.DOCKER_USER_NAME }} -p ${{ secrets.DOCKER_PASSWORD }}
       
       - name: Push docker image
-        run: docker push pingvin1308/cleannetcode.bot:0.0.2
+        run: docker push pingvin1308/cleannetcode.bot:${{ github.ref_name }}
 
   terraform:
+    needs: [build_image]
     name: 'Terraform'
     runs-on: ubuntu-latest
     environment: production
