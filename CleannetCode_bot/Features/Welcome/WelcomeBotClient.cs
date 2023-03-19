@@ -117,7 +117,7 @@ public class WelcomeBotClient : IWelcomeBotClient
 Имя профиля: {username ?? "Не знаю"},
 Github: {githubNick ?? "Не знаю"},
 Youtube: {youtubeName ?? "Не знаю"}\.",
-            parseMode: ParseMode.MarkdownV2,
+            parseMode: ParseMode.Html,
             cancellationToken: cancellationToken);
     }
 
