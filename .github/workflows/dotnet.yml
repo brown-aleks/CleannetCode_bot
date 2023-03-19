@@ -29,6 +29,9 @@ jobs:
         
     runs-on: ubuntu-latest
     
+    outputs:
+      version_tag: ${{ steps.version-tag.outputs.VERSION_TAG }}
+    
     steps:
     - uses: actions/checkout@v3
       with:
@@ -58,5 +61,5 @@ jobs:
     needs: [tag]
     uses: cleannetcode/CleannetCode_bot/.github/workflows/terraform.yml@master
     with:
-      tag: ${{needs.tag.outputs.output1}}
+      tag: ${{needs.tag.outputs.version_tag}}
     secrets: inherit
