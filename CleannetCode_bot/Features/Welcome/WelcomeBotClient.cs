@@ -116,7 +116,7 @@ public class WelcomeBotClient : IWelcomeBotClient
             text: $@"Что я знаю о тебе
 Имя профиля: {username ?? "Не знаю"},
 Github: {githubNick ?? "Не знаю"},
-Youtube: {youtubeName ?? "Не знаю"}\.",
+Youtube: {youtubeName ?? "Не знаю"}.",
             parseMode: ParseMode.Html,
             cancellationToken: cancellationToken);
     }
