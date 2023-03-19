@@ -2,7 +2,8 @@ name: 'Terraform'
 
 on:
   push:
-    tags: '*'
+    tags:
+      - '*'
 
 permissions:
   contents: read
