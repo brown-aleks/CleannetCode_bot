@@ -58,5 +58,5 @@ jobs:
     needs: [tag]
     uses: cleannetcode/CleannetCode_bot/.github/workflows/terraform.yml@master
     with:
-      tag: ${{ tag.steps.version-tag.outputs.VERSION_TAG }}"
+      tag: ${{needs.tag.outputs.output1}}
     secrets: inherit
