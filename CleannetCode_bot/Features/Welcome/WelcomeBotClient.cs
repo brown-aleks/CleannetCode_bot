@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Options;
+﻿using CleannetCode_bot.Infrastructure;
+using Microsoft.Extensions.Options;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -178,6 +179,7 @@ Youtube: {youtubeName ?? "Не знаю"}.",
 
     private static string GetUserLink(string username, long userId)
     {
-        return $"[@{username}](tg://user?id={userId})";
+        var userNameMessage = new MarkdownMessage(username);
+        return $"[@{userNameMessage.Text}](tg://user?id={userId})";
     }
 }
